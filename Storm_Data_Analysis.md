@@ -1,13 +1,15 @@
 ---
-title: "An Analysis of the Damage Caused by Storms"
+title: "An Analysis of the Damage Caused by Natural Events"
 author: "Raymond Dineen"
-date: "8/14/2020"
+date: "8/19/2020"
 output: 
   html_document: 
     keep_md: yes
 ---
 
 ### Synopsis
+
+The data for this analysis comes from the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. It contains data from every recorded storm/natural event starting from 1950. For out purposes, we only look at the data starting from 1996 since that is when all 48 official event types started being recorded. The data requires a bit of cleaning due to the considerable amount of typos and non-standard entries in the event type column. This is a potential source of errors since there are some many personal judgment calls to make about how to group classify the non-standard entries, if we even choose to use them in our analysis. After the cleaning, we graph the data into bar plots that answer questions about the impact these storms have on human health as well as property and crop damage. We look at it from a per-event and overall perspective to see which events are most devastating when they occur and which events are the greatest overall threats. 
 
 ### Data Processing
 
@@ -149,7 +151,8 @@ mean_per_event <- top40 %>% mutate(EVTYPE = as.factor(EVTYPE)) %>%
     ggplot(aes(EVTYPE, value, fill = stat)) +
     geom_col(position = "dodge") +
     theme(axis.text.x = element_text(angle = 90, hjust = 0.95, size = 8),
-          legend.text = element_text(size = 8), legend.title = element_text(size = 8), title = element_text(size = 10)) +
+          legend.text = element_text(size = 8), legend.title = element_text(size = 8),
+          title = element_text(size = 10), legend.key.size = unit(0.5, "lines")) +
     scale_fill_discrete(labels = c("Average Deaths", "Average Injuries")) +
     labs(x = "Event Type", y = "", title = "Deaths and Injuries Per Event 1996-2011", fill = "Legend")
 
@@ -162,7 +165,8 @@ sums <- top40 %>% mutate(EVTYPE = as.factor(EVTYPE)) %>%
     ggplot(aes(EVTYPE, value, fill = stat)) +
     geom_col(position = "dodge") +
     theme(axis.text.x = element_text(angle = 90, hjust = 0.95, size = 8),
-          legend.text = element_text(size = 8), legend.title = element_text(size = 8), title = element_text(size = 10)) +
+          legend.text = element_text(size = 8), legend.title = element_text(size = 8),
+          title = element_text(size = 10), legend.key.size = unit(0.5, "lines")) +
     scale_fill_discrete(labels = c("Total Deaths", "Total Injuries")) +
     labs(x = "Event Type", y = "", title = "Total Deaths and Injuries 1996-2011", fill = "Legend")
 
@@ -173,5 +177,51 @@ ggarrange(mean_per_event, sums, ncol = 2, nrow = 1)
 
 We can see from these graphs that hurricanes and excessive heat cause, by far, the most injuries per event with excessive heat causing the most deaths per event. However, we can also see that tornadoes have caused far more total injuries than any other event with excessive heat, floods, lightning, and thunderstorm wind also posting relatively high total injuries. This is because the frequency of these events occurring is so high that even though on average they may not be as devastating as a hurricane, the damage still adds up to be much higher overall.
 
+##### Which events have the greatest economic consequences?
+
+We answer this question similarly to how we answered the previous question. We will look at damage to property and crops per event as well as overall.
 
 
+```r
+#Economic Damage per event
+damage_per_event <- top40 %>% mutate(EVTYPE = as.factor(EVTYPE)) %>%
+    group_by(EVTYPE) %>%
+    summarize(meancrop = mean(CROPDMG), meanprop = mean(PROPDMG)) %>%
+    filter(meancrop > 500000 | meanprop > 500000) %>%
+    ungroup() %>%
+    gather("stat", "value", -EVTYPE) %>%
+    ggplot(aes(EVTYPE, value/1000000, fill = stat)) +
+    geom_bar(position = "stack", stat = "identity") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 0.95, size = 8),
+          legend.text = element_text(size = 8), legend.title = element_text(size = 8),
+          title = element_text(size = 10), legend.key.size = unit(0.5, "lines")) +
+    scale_fill_discrete(labels = c("Crop Damage", "Property Damage")) +
+    labs(x = "Event Type", y = "Average Cost of Damage (in millions of USD)",
+         title = "Economic Damage Per Event 1996-2011", fill = "Legend")
+
+#Total economic damage
+total_damage <- top40 %>% mutate(EVTYPE = as.factor(EVTYPE)) %>%
+    group_by(EVTYPE) %>%
+    summarize(totalcrop = sum(CROPDMG), totalprop = sum(PROPDMG)) %>%
+    filter(totalcrop > 1000000000 | totalprop > 1000000000) %>%
+    ungroup() %>%
+    gather("stat", "value", -EVTYPE) %>%
+    ggplot(aes(EVTYPE, value/1000000000, fill = stat)) +
+    geom_bar(position = "stack", stat = "identity") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 0.95, size = 8),
+          legend.text = element_text(size = 8), legend.title = element_text(size = 8),
+          title = element_text(size = 10), legend.key.size = unit(0.5, "lines")) +
+    scale_fill_discrete(labels = c("Crop Damage", "Property Damage")) +
+    labs(x = "Event Type", y = "Total Cost of Damage (in billions of USD)",
+         title = "Total Economic Damage 1996-2011", fill = "Legend")
+
+ggarrange(damage_per_event, total_damage, ncol = 2, nrow = 1)
+```
+
+![](Storm_Data_Analysis_files/figure-html/damageplot-1.png)<!-- -->
+
+From these graphs, we can again see hurricanes causing, by far, the most damage per event in both property damage and crop damage. Storm surges caused the second-most property damage per event and droughts caused the second-most crop damage per event. When we look at the total damage across all the data, we actually see that floods caused the most property damage followed distantly by hurricanes and storm surges. We can also note that tornadoes also did quite a bit of property damage on top of the high amount of injuries we saw in the previous plot. Droughts, unsurprisingly, caused the highest crop damage. It is worth noting that floods also did quite a lot of crop damage overall even though it was invisible on the damage per event graph.
+
+##### Conclusion
+
+Our data has shown that overall, if a hurricane shows up, it is very like to cause a high amount of injuries are well as very significant damage to property and crops. Floods, although less damaging on average, are so frequent that their economic and injury totals add up extremely high. Tornadoes are shown to be the greatest source of injuries. Excessive heat is shown to cause the most deaths. And finally, we saw that droughts are generally the largest source of crop damage.
